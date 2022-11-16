@@ -1,5 +1,5 @@
 {
-  "name": "lambda",
+  "name": "@lostpetjp/lambda",
   "version": "1.0.0",
   "description": "迷子ペットのデータベースで使用しているAWS lambdaのコードを管理しています。",
   "main": "index.js",
