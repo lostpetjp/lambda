@@ -6,5 +6,5 @@ package-lock.json
 .vscode
 env.txt
 
+*.zip
 policy.json
-**/index.js
