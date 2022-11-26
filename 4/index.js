@@ -213,43 +213,47 @@ Process.prototype = {
           }
         })
         .then((res) => {
-          var binary;
+          if (1 === this.status && 0 === abortController.status && res) {
+            var binary;
 
-          if (res[1]) {
-            var buffer = Buffer.from(res[1], "binary");
+            if (res[1]) {
+              var buffer = Buffer.from(res[1], "binary");
 
-            binary = (isWebp) ? Promise.resolve(buffer) : imagemin["buffer"](buffer, {
-              plugins: [mozjpeg({
-                quality: 80,
-                progressive: !0
-              }), pngquant({
-                quality: [.6, .8],
-                speed: 1,
-                strip: !0
-              })]
-            });
+              binary = (isWebp) ? Promise.resolve(buffer) : imagemin["buffer"](buffer, {
+                plugins: [mozjpeg({
+                  quality: 80,
+                  progressive: !0
+                }), pngquant({
+                  quality: [.6, .8],
+                  speed: 1,
+                  strip: !0
+                })]
+              });
+            }
+
+            return Promise.all([
+              res[0],
+              binary,
+            ]);
           }
-
-          return Promise.all([
-            res[0],
-            binary,
-          ]);
         })
         .then((res) => {
-          var sourceS3Data = res[0];
-          var binary = res[1];
+          if (1 === this.status && 0 === abortController.status && res) {
+            var sourceS3Data = res[0];
+            var binary = res[1];
 
-          if (binary) {
-            return this.S3PutObject(
-              distObject.bucket,
-              distObject.key,
-              (!isWebp && (!width || !height) && (binary.length > sourceS3Data.ContentLength)) ? sourceS3Data.Body : binary,
-              {
-                CacheControl: "max-age=" + entry.cacheTime + ",public,immutable",
-                ContentType: getMimeType(extension),
-                // "Tagging": "expires=3m", // 不要
-              }
-            );
+            if (binary) {
+              return this.S3PutObject(
+                distObject.bucket,
+                distObject.key,
+                (!isWebp && (!width || !height) && (binary.length > sourceS3Data.ContentLength)) ? sourceS3Data.Body : binary,
+                {
+                  CacheControl: "max-age=" + entry.cacheTime + ",public,immutable",
+                  ContentType: getMimeType(extension),
+                  // "Tagging": "expires=3m", // 不要
+                }
+              );
+            }
           }
         })
         .then(resolve)
