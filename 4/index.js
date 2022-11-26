@@ -16,8 +16,8 @@ const getMimeType = function (extension) {
     //   return "image/gif";
     case "webp":
       return "image/webp"
-    // case "avif": // => avif未対応
-    //  return "image/avif"
+    case "avif": // => avif未対応
+      return "image/avif"
   }
 };
 
@@ -121,6 +121,7 @@ Process.prototype = {
       var height = null;
       var extension = entry.extension;
       var isWebp = "webp" === extension;
+      var isAvif = "avif" === extension;
       var prefix = entry.prefix;
       var suffix = entry.suffix;
 
@@ -167,14 +168,49 @@ Process.prototype = {
 
       this.S3GetObject(srcObject.bucket, srcObject.key)
         .then((data) => {
-          var sharp = this.createSharp(extension, data.Body);
-          if (!isWebp && (width || height)) sharp = sharp.resize(width, height);
+          if (isAvif) {
+            abortController.status = 1;  // 通常処理は終了
 
-          return Promise.all([
-            data,
-            sharp.toBuffer(),
-          ]);
+            const avifKey = "avif/" + distObject.key;
 
+            S3.headObject({
+              Bucket: distObject.bucket,
+              Key: avifKey,
+            }, (err, data) => {
+              if (err) {
+                S3.putObject({
+                  Bucket: distObject.bucket,
+                  Key: avifKey,
+                  Body: Buffer.from(JSON.stringify({
+                    src: {
+                      bucket: srcObject.bucket,
+                      key: srcObject.key,
+                    },
+                    dst: {
+                      bucket: distObject.bucket,
+                      key: distObject.key,
+                      meta: {
+                        CacheControl: "max-age=" + entry.cacheTime + ",public,immutable",
+                        ContentType: getMimeType("avif"),
+                      },
+                    },
+                  })),
+                }, (err, data) => {
+                  this.redirect(prefix + (commandStr ? "-" + commandStr : "") + suffix.slice(0, -5) + ".webp", 86400);
+                });
+              } else {
+                this.redirect(prefix + (commandStr ? "-" + commandStr : "") + suffix.slice(0, -5) + ".webp", 86400);
+              }
+            });
+          } else {
+            var sharp = this.createSharp(extension, data.Body);
+            if (!isWebp && (width || height)) sharp = sharp.resize(width, height);
+
+            return Promise.all([
+              data,
+              sharp.toBuffer(),
+            ]);
+          }
         })
         .then((res) => {
           var binary;
@@ -348,7 +384,7 @@ Process.prototype = {
     */
 
     const bucket = process.env.BUCKET;
-    var matches = this.pathname.match(/^\/media\/(((m([0-9]+)s([0-9]+)x([0-9]+)z)(-)?([a-zA-Z0-9]+)?\.(jpg|png))(\.webp)?)$/);
+    var matches = this.pathname.match(/^\/media\/(((m([0-9]+)s([0-9]+)x([0-9]+)z)(-)?([a-zA-Z0-9]+)?\.(jpg|png))(\.webp|\.avif)?)$/);
 
     if (matches) {
       var basename = matches[2];
@@ -411,7 +447,7 @@ Process.prototype = {
             bucket: bucket,
             key: distDir + basename + webp,
           },
-          extension: "webp",
+          extension: webp.slice(1),
           cacheTime: 365 * 86400,
 
           command: command,
