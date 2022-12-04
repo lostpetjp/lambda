@@ -145,7 +145,7 @@ Process.prototype = {
             return this[method]();
           }
           // aspectがある(=width && height)場合、サイズ超過していたら、限界のサイズにリダイレクトする
-        } else if (size > 100) {
+        } else if (size > 600) {
           var naturalSize = "w" === direction ? naturalWidth : naturalHeight;
 
           if (size > naturalSize) {
