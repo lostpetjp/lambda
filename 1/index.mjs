@@ -8,6 +8,8 @@ export const handler = (event, context, callback) => {
   const srcKey = s3Event.object.key;
   const dstKey = "dist/" + (srcKey.slice(4)).replace(".0000000.jpg", ".jpg");
 
+  console.log("target:", srcKey);
+
   s3Client.send(new GetObjectCommand({
     Bucket: srcBucket,
     Key: srcKey,
@@ -78,6 +80,7 @@ export const handler = (event, context, callback) => {
       return s3Client.send(new CopyObjectCommand(params));
     })
     .then(() => {
+      console.log("ok");
       context.succeed();
     })
     .catch((err) => {
